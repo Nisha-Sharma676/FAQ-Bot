@@ -1,4 +1,4 @@
-# FAQBot 🤖
+# FAQBot 
 
 Ask it anything. It only answers what you tell it to.
 
