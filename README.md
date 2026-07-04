@@ -53,7 +53,7 @@ Open `http://localhost:3000`
 
 1. Go to portal.azure.com
 2. Create an Azure OpenAI resource
-3. Go to Azure AI Foundry → Deploy gpt-5-mini
+3. Go to Azure AI Foundry → Deploy gpt-5.4-mini
 4. Copy endpoint and key into `.env`
 
 ---
