@@ -1,221 +1,152 @@
-// FAQBot - Azure OpenAI
-// Smart FAQ Assistant
+const express = require('express');
+const dotenv = require('dotenv');
+const path = require('path');
+const cors = require('cors');
+const { AzureOpenAI } = require('openai');
 
-const sendBtn = document.getElementById('sendBtn');
-const userInput = document.getElementById('userInput');
-const chatBox = document.getElementById('chatBox');
-const systemPrompt = document.getElementById('systemPrompt');
+dotenv.config();
 
-
-// Azure Backend URL
-const API_URL = "https://faqbot-e4e9fgfygvfybuav.uaenorth-01.azurewebsites.net/api/chat";
-
-
-// Add message to chat
-function addMessage(text, type) {
-
-    const msg = document.createElement('div');
-
-    msg.classList.add('message', type);
-
-    msg.innerHTML = marked.parse(text);
-
-    chatBox.appendChild(msg);
-
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-    return msg;
-}
+const app = express();
+const PORT = process.env.PORT || 3000;
 
 
-
-// Send message
-async function sendMessage() {
-
-
-    const message = userInput.value.trim();
+// Middleware
+app.use(express.json());
 
 
-    if (!message) return;
+// CORS
+app.use(cors({
+    origin: true,
+    methods: ["GET", "POST"],
+    credentials: true
+}));
+
+
+// Serve frontend
+app.use(express.static(path.join(__dirname, '../public')));
+
+
+// Azure OpenAI Client
+const client = new AzureOpenAI({
+
+    endpoint: process.env.AZURE_OPENAI_ENDPOINT,
+
+    apiKey: process.env.AZURE_OPENAI_KEY,
+
+    apiVersion: process.env.AZURE_OPENAI_API_VERSION,
+
+    deployment: process.env.AZURE_OPENAI_DEPLOYMENT
+
+});
+
+
+// Debug Azure Configuration
+console.log({
+    endpoint: process.env.AZURE_OPENAI_ENDPOINT,
+    deployment: process.env.AZURE_OPENAI_DEPLOYMENT,
+    apiVersion: process.env.AZURE_OPENAI_API_VERSION,
+    keyExists: !!process.env.AZURE_OPENAI_KEY
+});
 
 
 
-    // Show user message
-    addMessage(message, "user");
+// Chat API
+app.post('/api/chat', async (req, res) => {
 
 
-    userInput.value = "";
-
-    sendBtn.disabled = true;
+    const { message, systemPrompt } = req.body;
 
 
+    if (!message) {
 
-    // Loading message
-    const loadingMsg = addMessage(
-        "Thinking...",
-        "loading"
-    );
+        return res.status(400).json({
+            error: "Message is required"
+        });
+
+    }
 
 
 
     try {
 
 
-        const response = await fetch(API_URL, {
-
-            method: "POST",
-
-            headers: {
-
-                "Content-Type": "application/json"
-
-            },
+        const response = await client.chat.completions.create({
 
 
-            body: JSON.stringify({
+            model: process.env.AZURE_OPENAI_DEPLOYMENT,
 
-                message: message,
 
-                systemPrompt: systemPrompt.value.trim()
+            messages: [
 
-            })
+                {
+                    role: "system",
+                    content:
+                        systemPrompt ||
+                        "You are a helpful FAQ assistant."
+                },
+
+
+                {
+                    role: "user",
+                    content: message
+                }
+
+            ],
+
+
+            max_completion_tokens: 500
 
         });
 
 
 
-        console.log(
-            "Status:",
-            response.status
-        );
+        res.json({
 
+            reply: response.choices[0].message.content
 
-        const contentType =
-            response.headers.get("content-type");
-
-
-        console.log(
-            "Content-Type:",
-            contentType
-        );
+        });
 
 
 
-        // Remove loading
-        if (loadingMsg) {
-
-            loadingMsg.remove();
-
-        }
-
-
-
-        const data = await response.json();
-
-
-
-        if (!response.ok) {
-
-
-            addMessage(
-
-                data.error ||
-                "Server error occurred.",
-
-                "bot"
-
-            );
-
-
-            return;
-
-        }
-
-
-
-        if (data.reply) {
-
-
-            addMessage(
-
-                data.reply,
-
-                "bot"
-
-            );
-
-
-        } else {
-
-
-            addMessage(
-
-                "No response received.",
-
-                "bot"
-
-            );
-
-
-        }
-
-
-
-    } catch(error) {
+    } catch (error) {
 
 
         console.error(
-            "Connection Error:",
+            "Azure OpenAI Error:",
             error
         );
 
 
-        if (loadingMsg) {
+        res.status(500).json({
 
-            loadingMsg.remove();
+            error: error.message
 
-        }
-
-
-
-        addMessage(
-
-            "Unable to connect with server.",
-
-            "bot"
-
-        );
-
+        });
 
     }
 
-
-
-    sendBtn.disabled = false;
-
-
-}
+});
 
 
 
-// Button click
-sendBtn.addEventListener(
-    "click",
-    sendMessage
-);
+// Health Check
+app.get('/health', (req, res) => {
+
+    res.status(200).json({
+
+        status: "FAQBot is running"
+
+    });
+
+});
 
 
 
-// Enter key
-userInput.addEventListener(
-    "keypress",
-    function(event) {
+// Start Server
+app.listen(PORT, () => {
 
-        if (event.key === "Enter") {
+    console.log(
+        `FAQBot running on port ${PORT}`
+    );
 
-            sendMessage();
-
-        }
-
-    }
-);
+});

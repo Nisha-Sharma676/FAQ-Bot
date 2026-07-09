@@ -9,6 +9,7 @@ const systemPrompt = document.getElementById('systemPrompt');
 
 // Add message to chat
 function addMessage(text, type) {
+
     const msg = document.createElement('div');
     msg.classList.add('message', type);
 
@@ -46,19 +47,19 @@ async function sendMessage() {
 
     try {
 
-        const response = await fetch('/api/chat', {
+        const response = await fetch("/api/chat", {
 
-            method: 'POST',
+            method: "POST",
 
             headers: {
-                'Content-Type': 'application/json'
+                "Content-Type": "application/json"
             },
 
             body: JSON.stringify({
 
                 message: message,
 
-                systemPrompt: systemPrompt.value.trim()
+                systemPrompt: systemPrompt.value
 
             })
 
@@ -68,7 +69,7 @@ async function sendMessage() {
         const data = await response.json();
 
 
-        // Remove loading
+        // Remove loading message
         if (loadingMsg && loadingMsg.parentNode) {
             chatBox.removeChild(loadingMsg);
         }
@@ -77,8 +78,7 @@ async function sendMessage() {
         if (!response.ok) {
 
             addMessage(
-                data.error || 
-                "Server error. Please try again.",
+                data.error || "Server error. Please try again.",
                 "bot"
             );
 
@@ -130,7 +130,6 @@ async function sendMessage() {
 }
 
 
-
 // Button click
 sendBtn.addEventListener(
     'click',
@@ -138,7 +137,7 @@ sendBtn.addEventListener(
 );
 
 
-// Enter key
+// Enter key support
 userInput.addEventListener(
     'keypress',
     (e) => {
